@@ -40,27 +40,98 @@ You are tasked with guiding the user to prepare his working tree for starting to
        - When the user asks to create a Jira ticket do that by setting the summary field to the project name input the user provided earlier and add it to PROJECT.md
 
 3. **Get access to the relevant code or files**
-   - if there already is a `code` folder, and it contains files or folders 
+   - if there already is a `code` folder, and it contains files or folders
      - check if it contains any broken soft links, if that is the case tell the user about it
+     - for each repo already listed under `## Repositories` in PROJECT.md that does not yet have a `**GitHub**:` line: resolve its path, run `git -C {resolved_path} remote get-url origin`, derive the GitHub URL, and add it to the entry
      - proceed to the next step
    - if the `code` folder does not exist or is empty,
      - create it if it doesn't exist
      - ask the user if there is any code to add to the project.
-       - for absolute or relative folders he replies with, create a soft link into the `code` folder 
+       - for relative paths the user replies with: only accept paths of the form `../sibling` (one level up, sibling of the repo root) — reject absolute paths and any path with more than one `..` segment as non-portable and potentially unsafe. Create a soft link into the `code` folder using the relative path.
        - for any git URLs he is responding with try to clone them.
      - IMPORTANT: after each reply ask if there is more to add until he confirms the step is complete
+   - **After each symlink is created or repo is cloned**, detect signs of configuration in that repo:
+     - Resolve the path: `readlink -f code/{name}`
+     - Run `git -C {resolved_path} remote get-url origin` to get the remote URL; derive the GitHub URL (e.g. `https://github.com/owner/repo`) by normalising SSH and HTTPS remote formats. If the command fails or returns nothing, note as "not a git repo / no remote"
+     - Check for (presence only, don't read contents):
+       - Agent instructions: `.claude/CLAUDE.md`, `CLAUDE.md`, `AGENTS.md`, `.agents`
+       - Env: `.envrc.template`
+       - Node version: `.nvmrc`
+       - Tooling (in priority order): `pyproject.toml` → `uv sync`; `package-lock.json` → `npm ci`; `pnpm-lock.yaml` or `package.json` (no package-lock) → `pnpm install`; `Makefile` → `make install`
+     - Show the detected info and ask the user to confirm or correct before saving:
+       ```
+       Detected for code/{name} (→ {resolved_path}):
+       - GitHub: https://github.com/owner/repo (or "not a git repo / no remote")
+       - Agent instructions: [list found, or "none"]
+       - Env: .envrc.template found / not found
+       - Node: .nvmrc found / not found
+       - Tooling: [detected command or "none"]
+
+       Does this look correct? Any corrections before I save to PROJECT.md?
+       ```
+     - After confirmation, add or update a `## Repositories` section in PROJECT.md:
+       ```markdown
+       ## Repositories
+
+       ### {name}
+       - **Path**: `/absolute/resolved/path`
+       - **GitHub**: https://github.com/owner/repo
+       - **Agent instructions**: CLAUDE.md, AGENTS.md — read before working in this repo
+       - **Env**: `.envrc.template` found — `.envrc` must be configured and `direnv allow` run
+       - **Node version**: `.nvmrc` found — ensure correct node version is active
+       - **Install**: `pnpm install`
+       ```
+       Omit any line where nothing was detected (including GitHub if no remote was found).
        
 4. **Provide a project overview**
-   - Explore the TASK_FOLDERs and the current status regarding the tasks contained in them.
-   - check which files in those folders have been changed most recently in this branch
-   - If the `current-task` link exists and points to an existing TASK_FOLDER, inform the user about the currently selected task (the name of the folder that the link points to.)
-   - Provide a quick summary of the project from PROJECT.md, the existing tasks and their status:
-     - which of the tasks have a research or plan file and for plan files how much of it is completed
-   
+   - List all TASK_FOLDERs; for each one read `task.yaml` if present (for status, description, dependencies); for tasks without one check for research/plan files to infer status
+   - If the `current-task` link exists and points to an existing TASK_FOLDER, call it out
+   - Show a task overview, for example:
+     ```
+     Tasks:
+     - T-auth [planned]: Authentication flow
+     - T-dashboard [pending]: Dashboard UI — depends on: T-auth
+     ```
+   - Note which files have been changed most recently in this branch
+
 5. **Understand and link the task the user is working on**
    - Ask the user to pick an existing TASK_FOLDER to work on by providing a list of existing TASK_FOLDERs or to provide a new task name.
      - If the user wants to continue with the current task, proceed to the next step
      - If the user picks an existing TASK_FOLDER, recreate the soft link `current-task` that points to the selected TASK_FOLDER
-     - Otherwise, create a TASK_FOLDER from the input and create a new soft link `current-task` that points to it
-     
-6. Remind the user about the order of the steps: `/research`, `/plan`, `/implement` and ask them to start a new session or `/clear` this one before continuing.
+     - If the user provides a new task name: create a TASK_FOLDER, create a new soft link `current-task` pointing to it, then create `{task_folder}/task.yaml` by asking:
+       - "Describe this task in one line:"
+       - "Does this task depend on completing any existing tasks first? (list TASK_FOLDER names or none)"
+       - "Does any existing task need this one to complete first? (list TASK_FOLDER names or none)"
+       Then write the file:
+       ```yaml
+       status: pending
+       description: "[user's one-liner]"
+       depends_on: []  # or list of TASK_FOLDER names
+       blocks: []      # or list of TASK_FOLDER names
+       jira: ""        # optional
+       ```
+
+6. **Stage changes for commit**
+   - `git add {resolved_task_folder}/` (task folder with task.yaml)
+   - `git add PROJECT.md` (if created or modified)
+   - `git add code/` (if symlinks were created or repos were cloned)
+
+7. **Suggest the next step**
+
+   If `current-task` is set and `{resolved_task_folder}/task.yaml` exists, read its `status`
+   and suggest accordingly:
+
+   | status      | suggestion                                                               |
+   |-------------|--------------------------------------------------------------------------|
+   | pending     | "Run `/research` to begin research for this task."                       |
+   | researching | "Research is in progress — run `/research` to continue."                 |
+   | researched  | "Research is complete — run `/plan` to create an implementation plan."   |
+   | planned     | "A plan exists — run `/implement` to start implementation."              |
+   | in-progress | "Implementation is in progress — run `/implement` to continue."          |
+   | blocked     | "This task is blocked on: {depends_on list}. Work on those tasks first." |
+   | complete    | "This task is complete. Pick a new task or start a fresh session."       |
+
+   In all cases, remind the user to start a new session or `/clear` before running the next command.
+
+   If no `current-task` is set or no `task.yaml` exists, fall back to the generic reminder:
+   "The steps are `/research` → `/plan` → `/implement`. Start a new session or `/clear` before continuing."

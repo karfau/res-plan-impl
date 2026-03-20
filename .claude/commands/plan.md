@@ -16,8 +16,40 @@ You are tasked with creating detailed implementation plans through an interactiv
 - If the `current-task` link does not exist or is a broken link, ask the user to pick an existing TASK_FOLDER or provide a new task name.
   - If the user picks an existing TASK_FOLDER, recreate the soft link `current-task` pointing to it
   - Otherwise, create a TASK_FOLDER from the input and create a new soft link `current-task` pointing to it
+- Resolve `current-task` to the real path: `readlink -f current-task`
+- Read `task.yaml` from all TASK_FOLDERs at the repo root; note each task's status and dependencies — be aware of potential overlap with parallel work
+- If the current task has `depends_on` entries, read those tasks' plan files for context
 
 Then proceed to the Initial Response.
+
+## Project Context
+
+If `PROJECT.md` exists at the repository root, read it fully. For each repo listed under `## Repositories`:
+- Note its resolved path
+- If "Agent instructions" is listed: read each of those files fully (`CLAUDE.md`, `AGENTS.md`, etc.) before any research
+
+When spawning any sub-agent, include the resolved repo path in the prompt:
+*"The target codebase is at `{resolved_path}`. If `.claude/`, `CLAUDE.md`, or `AGENTS.md` exist there, follow their conventions."*
+
+**If any repo in `## Repositories` has an "Env:", "Install:", or "Node version:" line**, pause and inform the user before proceeding:
+
+> "This task involves `code/{name}` (`{resolved_path}`), which requires environment/tooling setup
+> (detected: {list what was found}).
+>
+> For best results, run planning from a Claude session started inside that repository, where the
+> correct environment and repo-specific Claude instructions are automatically available:
+> ```
+> cd {resolved_path}
+> claude
+> ```
+> Once inside that session, tell Claude:
+> *"Create a plan — read the research at `{absolute_path_to_research_file}`"*
+>
+> Would you like to continue from this session anyway, or start from the target repository?"
+
+If the user chooses to continue anyway, proceed. Note any env-dependent success criteria commands
+should be prefixed with `direnv exec {resolved_path}` and marked with a caveat that they require
+a configured `.envrc`.
 
 ## Initial Response
 
@@ -115,12 +147,15 @@ After structure approval:
 
 ### Success Criteria:
 
+#### Prerequisites:
+- [ ] Dependencies installed: `direnv exec code/{name} pnpm install` *(omit if no linked repo)*
+- [ ] Env configured: `.envrc` exists and `direnv allow` has been run *(omit if no .envrc required)*
+
 #### Automated Verification:
-- [ ] Migration applies cleanly: `make migrate`
-- [ ] Unit tests pass: `make test-component`
-- [ ] Type checking passes: `npm run typecheck`
-- [ ] Linting passes: `make lint`
-- [ ] Integration tests pass: `make test-integration`
+- [ ] Migration applies cleanly: `direnv exec code/{name} make migrate`
+- [ ] Unit tests pass: `direnv exec code/{name} make test`
+- [ ] Type checking passes: `direnv exec code/{name} npm run typecheck`
+- [ ] Linting passes: `direnv exec code/{name} make lint`
 
 #### Manual Verification:
 - [ ] Feature works as expected when tested via UI
@@ -169,6 +204,12 @@ After structure approval:
 ### Step 5: Review
 
 Share the file path and ask whether the phasing, success criteria, and technical details need adjustment. Iterate until the user is satisfied.
+
+If the plan's Changes Required sections touch the same files as another task's plan, flag the overlap to the user and ask whether the shared work should be extracted into a separate dependency task.
+
+Once the plan is finalized:
+- Update current task's `task.yaml`: set `status: planned`
+- Stage: `git add {resolved_task_folder}/ PROJECT.md`
 
 ## Key Rules
 

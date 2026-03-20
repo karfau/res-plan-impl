@@ -22,10 +22,22 @@ You are tasked with conducting comprehensive research across the codebase to ans
 
 ## Initial Setup:
 
-- If the `current-task` link does not exist or is a broken link ask the user to pick an existing TASK_FOLDER to work on 
+- If the `current-task` link does not exist or is a broken link ask the user to pick an existing TASK_FOLDER to work on
   by providing a list of existing TASK_FOLDERs or to provide a new task name.
   - If the user picks an existing TASK_FOLDER, recreate the soft link `current-task` that points to the selected TASK_FOLDER
   - Otherwise, create a TASK_FOLDER from the input and create a new soft link `current-task` that points to it
+- Resolve `current-task` to the real path: `readlink -f current-task`
+- Read `task.yaml` from all TASK_FOLDERs at the repo root; note each task's status, description, and dependencies for context — be aware of work happening in parallel
+- Update current task's `task.yaml`: set `status: researching` (create the file with `status: researching` if it doesn't exist)
+
+## Project Context
+
+If `PROJECT.md` exists at the repository root, read it fully. For each repo listed under `## Repositories`:
+- Note its resolved path
+- If "Agent instructions" is listed: read each of those files fully (`CLAUDE.md`, `AGENTS.md`, etc.) into the main context before spawning any sub-agents
+
+When spawning any sub-agent that researches code in a linked repo, include in the prompt:
+*"The target codebase is at `{resolved_path}`. If `.claude/`, `CLAUDE.md`, or `AGENTS.md` exist there, follow their conventions."*
 
 Afterwards respond with:
 ```
@@ -161,6 +173,11 @@ Then wait for the user's research query.
 8. **Present findings:**
    - Present a concise summary of findings to the user
    - Include key file references for easy navigation
+   - If research revealed foundational work that likely overlaps with another task or that another task depends on, call it out explicitly: suggest creating a shared task and list it as a prerequisite
+   - Update current task's `task.yaml`:
+     - Set `status: researched`
+     - Add any other TASK_FOLDERs identified as prerequisites to `depends_on`
+   - Stage: `git add {resolved_task_folder}/`
    - Ask if they have follow-up questions or need clarification
 
 9. **Handle follow-up questions:**

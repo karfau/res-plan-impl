@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+# paths are relative to the project root
+
+# .husky/no-commit-to-default-branch main

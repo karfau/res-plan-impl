@@ -1,0 +1,12 @@
+{
+  "name": "res-plan-impl",
+  "private": true,
+  "packageManager": "pnpm@10.31.0",
+  "devDependencies": {
+    "degit": "2.8.4",
+    "husky": "9.1.7"
+  },
+  "scripts": {
+    "prepare": "husky"
+  }
+}

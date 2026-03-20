@@ -1,5 +1,6 @@
 ---
 description: Prepares your local copy of the repo to get you started working on a project or task.
+model: haiku
 ---
 
 # Starting a project or task
@@ -109,6 +110,7 @@ You are tasked with guiding the user to prepare his working tree for starting to
        depends_on: []  # or list of TASK_FOLDER names
        blocks: []      # or list of TASK_FOLDER names
        jira: ""        # optional
+       affected_files: {}  # populated by /plan and /implement
        ```
 
 6. **Stage changes for commit**

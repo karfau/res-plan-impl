@@ -7,20 +7,23 @@ model: opus
 
 You are tasked with conducting comprehensive research across the codebase to answer user questions by spawning parallel sub-agents and synthesizing their findings.
 
+## Key Rules
+
+- **Document only — never evaluate**: You and all sub-agents are documentarians, not critics. Document what IS, not what
+  SHOULD BE. Never suggest improvements, critique implementations, perform root cause analysis, or recommend changes
+  unless the user explicitly asks.
+- **Always use parallel Task agents**: Maximize efficiency and minimize context usage by spawning agents concurrently.
+- **Always run fresh codebase research**: Never rely solely on existing research documents — always verify against live
+  code.
+- **Follow step ordering strictly**: Always read mentioned files first (step 1). Always wait for all sub-agents before
+  synthesizing (step 4). Always gather metadata before writing the document (step 5 before 6). Never write the research
+  document with placeholder values.
+
 ## Definitions
 
 - **TASK_FOLDER**: A local folder on the repository root prefixed with `T-`
 
-## CRITICAL: YOUR ONLY JOB IS TO DOCUMENT AND EXPLAIN THE CODEBASE AS IT EXISTS TODAY
-- DO NOT suggest improvements or changes unless the user explicitly asks for them
-- DO NOT perform root cause analysis unless the user explicitly asks for them
-- DO NOT propose future enhancements unless the user explicitly asks for them
-- DO NOT critique the implementation or identify problems
-- DO NOT recommend refactoring, optimization, or architectural changes
-- ONLY describe what exists, where it exists, how it works, and how components interact
-- You are creating a technical map/documentation of the existing system
-
-## Initial Setup:
+## Initial Setup
 
 - If the `current-task` link does not exist or is a broken link ask the user to pick an existing TASK_FOLDER to work on
   by providing a list of existing TASK_FOLDERs or to provide a new task name.
@@ -38,6 +41,23 @@ If `PROJECT.md` exists at the repository root, read it fully. For each repo list
 
 When spawning any sub-agent that researches code in a linked repo, include in the prompt:
 *"The target codebase is at `{resolved_path}`. If `.claude/`, `CLAUDE.md`, or `AGENTS.md` exist there, follow their conventions."*
+
+**If any repo in `## Repositories` has an "Env:", "Install:", or "Node version:" line**, note this context and inform the user before proceeding:
+
+> "This task involves `code/{name}` (`{resolved_path}`), which has environment/tooling configuration
+> (detected: {list what was found}).
+>
+> For best results, run research from a Claude session started inside that repository, where the
+> correct environment and repo-specific Claude instructions are automatically available:
+> ```
+> cd {resolved_path}
+> claude
+> ```
+> Once inside that session, provide your research question.
+>
+> Would you like to continue from this session anyway, or start from the target repository?"
+
+If the user chooses to continue anyway, proceed. Be aware that env-dependent tooling context may not be fully available to sub-agents.
 
 Afterwards respond with:
 ```
@@ -153,6 +173,8 @@ Then wait for the user's research query.
      ## Open Questions
      [Any areas that need further investigation]
      ```
+   - The `date` field captures when the research was conducted — set it to the actual research timestamp with timezone, not just today's date.
+   - Keep frontmatter consistent across all research documents: always include all fields shown above, use `snake_case` for multi-word field names, and choose tags relevant to the topic and components studied.
 
 7. **Add GitHub permalinks (if applicable):**
    - For each file reference, determine which repository it belongs to:
@@ -186,30 +208,3 @@ Then wait for the user's research query.
    - Add a new section: `## Follow-up Research [timestamp]`
    - Spawn new sub-agents as needed for additional investigation
    - Continue updating the document
-
-## Important notes:
-- Always use parallel Task agents to maximize efficiency and minimize context usage
-- Always run fresh codebase research - never rely solely on existing research documents
-- Focus on finding concrete file paths and line numbers for developer reference
-- Research documents should be self-contained with all necessary context
-- Each sub-agent prompt should be specific and focused on read-only documentation operations
-- Document cross-component connections and how systems interact
-- Include temporal context (when the research was conducted)
-- Link to GitHub when possible for permanent references
-- Keep the main agent focused on synthesis, not deep file reading
-- Have sub-agents document examples and usage patterns as they exist
-- **CRITICAL**: You and all sub-agents are documentarians, not evaluators
-- **REMEMBER**: Document what IS, not what SHOULD BE
-- **NO RECOMMENDATIONS**: Only describe the current state of the codebase
-- **File reading**: Always read mentioned files FULLY (no limit/offset) before spawning sub-tasks
-- **Critical ordering**: Follow the numbered steps exactly
-  - ALWAYS read mentioned files first before spawning sub-tasks (step 1)
-  - ALWAYS wait for all sub-agents to complete before synthesizing (step 4)
-  - ALWAYS gather metadata before writing the document (step 5 before step 6)
-  - NEVER write the research document with placeholder values
-- **Frontmatter consistency**:
-  - Always include frontmatter at the beginning of research documents
-  - Keep frontmatter fields consistent across all research documents
-  - Update frontmatter when adding follow-up research
-  - Use snake_case for multi-word field names (e.g., `last_updated`, `git_commit`)
-  - Tags should be relevant to the research topic and components studied

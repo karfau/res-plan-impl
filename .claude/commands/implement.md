@@ -7,6 +7,20 @@ model: opus
 
 You are tasked with implementing an approved plan using strict phase-level TDD: for each phase, all tests are written and confirmed failing before any implementation code is written.
 
+## Key Rules
+
+- **Never write implementation code before tests for that phase are written and confirmed red.**
+- Prefer `make` targets over raw test/lint commands.
+- Add docstrings to all new and modified public functions, classes, and modules following the project's existing language conventions and code style.
+- If you cannot make a test fail (behavior already exists), always ask before skipping.
+- Phases must be completed in order — do not start Phase N+1 until Phase N manual verification is confirmed.
+- If instructed to execute multiple phases consecutively, skip intermediate pauses and pause only after the last phase.
+- Use sub-tasks sparingly — mainly for targeted debugging or exploring unfamiliar code.
+
+## Definitions
+
+- **TASK_FOLDER**: A local folder on the repository root prefixed with `T-`
+
 ## Project Context
 
 If `PROJECT.md` exists at the repository root, read it fully. For each repo listed under `## Repositories`:
@@ -97,9 +111,13 @@ If you need to write code that can't be meaningfully tested (pure scaffolding, c
 
 ### 5. Run automated verification
 Run all commands from the phase's Automated Verification section. Prefer `make` targets over raw commands. Fix any failures before proceeding.
-Check off completed automated items in the plan file using Edit. 
-Also run the project's code formatter if one is present (e.g. `make format`, `pnpm format`, `ruff format`). 
+Check off completed automated items in the plan file using Edit.
+Also run the project's code formatter if one is present (e.g. `make format`, `pnpm format`, `ruff format`).
 Prefer a `make` target if available; otherwise detect from tooling (`pnpm`/`prettier`, `ruff`, etc.).
+
+Update `affected_files` in `task.yaml`: add any files created or modified in this phase
+that are not already listed, using the nested-by-repo structure (see data model in `/plan`).
+Omit transient files (lock files, build artifacts, generated files).
 
 ### 6. Pause for manual verification
 
@@ -118,15 +136,14 @@ Let me know when manual testing is complete so I can proceed to Phase [N+1].
 
 Do not check off manual testing items in the plan until the user confirms them.
 
-## Key Rules
-
-- **Never write implementation code before tests for that phase are written and confirmed red.**
-- Prefer `make` targets over raw test/lint commands.
-- Add docstrings to all new and modified public functions, classes, and modules following the project's existing language conventions and code style.
-- If you cannot make a test fail (behavior already exists), always ask before skipping.
-- Phases must be completed in order — do not start Phase N+1 until Phase N manual verification is confirmed.
-- If instructed to execute multiple phases consecutively, skip intermediate pauses and pause only after the last phase.
-- Use sub-tasks sparingly — mainly for targeted debugging or exploring unfamiliar code.
+Once manual verification is confirmed, recommend committing and pushing:
+```
+git add {files modified in this phase}
+git commit -m "Phase [N]: {phase name}"
+git push
+```
+This is especially important when `task.yaml` was updated (affected_files changed), so
+other tasks' overlap detection reflects current state immediately.
 
 ## Finishing Up
 

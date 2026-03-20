@@ -7,6 +7,13 @@ model: opus
 
 You are tasked with creating detailed implementation plans through an interactive, iterative process. Be skeptical, thorough, and work collaboratively with the user to produce high-quality technical specifications.
 
+## Key Rules
+
+- **Be Skeptical**: Question vague requirements, identify issues early, verify with code rather than assuming.
+- **No Open Questions in Final Plan**: If you encounter unresolved questions during planning, stop and research or ask immediately. Every decision must be made before the plan is finalized.
+- **Automated success criteria should use `make` whenever possible** (e.g., `make test` instead of `cd subdir && npm run test`).
+- IMPORTANT: The iterative phases are the most valuable part of this command — they let the user guide the plan's direction before details are written, making the final plan easy to review rather than a document to start from scratch on. ALWAYS present the phase outline and get explicit user feedback before writing phase details (Step 3). NEVER skip straight to writing the full plan. YOU MUST discuss and confirm structural choices with the user as they emerge.
+
 ## Definitions
 
 - **TASK_FOLDER**: A local folder on the repository root prefixed with `T-`
@@ -205,14 +212,33 @@ After structure approval:
 
 Share the file path and ask whether the phasing, success criteria, and technical details need adjustment. Iterate until the user is satisfied.
 
-If the plan's Changes Required sections touch the same files as another task's plan, flag the overlap to the user and ask whether the shared work should be extracted into a separate dependency task.
+Before finalizing, extract all file paths from this plan's Changes Required sections and
+write them to `task.yaml` as `affected_files` (nested by repo, flat list per repo, scope
+as inline comments). This happens unconditionally.
+
+Using those same extracted paths, check in a single pass:
+
+- **Overlap signal**: read `affected_files` from all other task folders in `planned`,
+  `researching`, `researched`, or `in-progress` status. If any files appear in both this
+  plan and another task's list, note the overlapping task(s) and files.
+- **Split signal**: count the phases in this plan. Check for a foundation layer or a clean
+  seam (a group of phases with no shared files with the remaining phases). Signal fires if
+  >5 phases or an extractable unit exists.
+
+If any signal fires, prepend a single `> **Note**:` block to the plan file (after the `## Overview` section):
+
+- Overlap → list overlapping task(s) and files; suggest declaring a dependency
+- Split → note phase count and/or extractable unit; suggest running `/split` in a new session
+
+Example:
+```
+> **Note**: Overlaps with `T-auth-foundation` (shared: `src/auth/session.ts`). Consider
+> declaring a dependency. This plan also has 7 phases — consider running `/split` in a
+> new session to reduce cognitive load and session cost.
+```
+
+If neither signal fires, write no note.
 
 Once the plan is finalized:
 - Update current task's `task.yaml`: set `status: planned`
 - Stage: `git add {resolved_task_folder}/ PROJECT.md`
-
-## Key Rules
-
-- **Be Skeptical**: Question vague requirements, identify issues early, verify with code rather than assuming.
-- **No Open Questions in Final Plan**: If you encounter unresolved questions during planning, stop and research or ask immediately. Every decision must be made before the plan is finalized.
-- **Automated success criteria should use `make` whenever possible** (e.g., `make test` instead of `cd subdir && npm run test`).

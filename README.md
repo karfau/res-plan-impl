@@ -16,9 +16,15 @@ with only the compact output of the previous phase as input, keeping context uti
 The structured artifacts are a second, compounding benefit. Research documents and plans are committed 
 and can serve as a reference of detailed progress on a topic, handover in case of sickness, etc
 
-Reviewing a 200-line plan before implementation begins is higher leverage than reviewing the resulting 2,000-line PR: 
-a misunderstanding caught in the research phase is cheap to fix; 
-the same misunderstanding caught in code review is expensive. 
+Errors compound across phases: a bad line of code is just a bad line of code, but a bad line of a plan
+could lead to hundreds of bad lines of code, and a bad line of research — a misunderstanding of how the codebase
+works — could produce thousands. Human effort is highest-leverage when applied to research and plan review, not
+code review.
+
+![errors compound across phases](https://github.com/user-attachments/assets/dab49f61-caae-4c15-b481-ee9b8f64995f)
+
+Reviewing a 200-line plan before implementation begins is therefore higher leverage than reviewing the resulting
+2,000-line PR.
 
 Teams that adopt this workflow report better mental alignment — everyone can read a plan in minutes, 
 without spelunking through dozens of files to understand why code was written a certain way.

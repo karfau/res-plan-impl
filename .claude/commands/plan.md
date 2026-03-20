@@ -25,7 +25,12 @@ You are tasked with creating detailed implementation plans through an interactiv
   - Otherwise, create a TASK_FOLDER from the input and create a new soft link `current-task` pointing to it
 - Resolve `current-task` to the real path: `readlink -f current-task`
 - Read `task.yaml` from all TASK_FOLDERs at the repo root; note each task's status and dependencies — be aware of potential overlap with parallel work
-- If the current task has `depends_on` entries, read those tasks' plan files for context
+- **Status check**: if the current task has a `task.yaml` and its status is not `researched`, `planned`, or `planning`, warn before proceeding:
+  > "Current status is `{status}` — expected `researched` before planning. Continue anyway?"
+  Wait for confirmation before proceeding.
+- If `plan.md` already exists in the current task folder, read it fully — this is a refinement session, not a fresh start.
+- List all `research-*.md` files in the current task folder ordered by most recently modified and read them all fully into context. Report which files were found (e.g. "Found 2 research docs: research-2025-01-08-auth-flow.md, research-2025-01-10-session-storage.md").
+- If the current task has `depends_on` entries, read those tasks' `plan.md` for context
 
 Then proceed to the Initial Response.
 
@@ -60,9 +65,9 @@ a configured `.envrc`.
 
 ## Initial Response
 
-1. **If a file path was provided as a parameter**: read it FULLY and begin research immediately.
+1. **If `plan.md` was loaded in Initial Setup**: summarize the existing plan (phases, key decisions) and ask: "What would you like to change or refine?" Skip to whichever Step best matches the requested change — the user may only need to adjust a phase (Step 4) or restructure (Step 3) without redoing full research.
 
-2. **If no parameters provided**: Welcome the user, ask for the task description, relevant context/constraints, and any related files or research. Mention the `/plan <file>` shortcut. Wait for input.
+2. **If no existing plan**: Welcome the user, summarize the research docs already loaded (from Initial Setup), and ask for the task description and any additional context, constraints, or relevant files. Wait for input.
 
 ## Process Steps
 
@@ -79,16 +84,18 @@ a configured `.envrc`.
 
 ### Step 2: Research & Discovery
 
-1. **If the user corrects a misunderstanding**: do NOT just accept it — spawn new research tasks to verify, then read the relevant files yourself before proceeding.
+1. **Ask about external dependencies** before spawning any research agents: "Are there any external dependencies for this task — things outside the codebase that must be in place before implementation can begin (e.g. third-party API access, infrastructure provisioning, approvals from stakeholders)?" Note each item — they will inform research scope and design options, and will be written to the plan in Step 5.
 
-2. **Create a research todo list** using the task list tool.
+2. **If the user corrects a misunderstanding**: do NOT just accept it — spawn new research tasks to verify, then read the relevant files yourself before proceeding.
 
-3. **Spawn parallel sub-tasks** using the right agent for each area:
+3. **Create a research todo list** using the task list tool.
+
+4. **Spawn parallel sub-tasks** using the right agent for each area:
    - **codebase-locator** — find specific files
    - **codebase-analyzer** — understand implementation details
    - **codebase-pattern-finder** — find similar features to model after
 
-4. **Wait for ALL sub-tasks to complete**, then present findings, design options, and any remaining open questions. Ask which approach aligns with the user's vision.
+5. **Wait for ALL sub-tasks to complete**, then present findings, design options, and any remaining open questions. Ask which approach aligns with the user's vision.
 
 ### Step 3: Plan Structure Development
 
@@ -100,7 +107,8 @@ After structure approval:
 
 1. **Save the file**:
    - Resolve `current-task` to the real path: `readlink -f current-task`
-   - Filename format: `plan-YYYY-MM-DD-description.md` (kebab-case description, today's date)
+   - Filename: `plan.md`
+   - After saving, update `task.yaml`: set `status: planning`.
 
 2. **Use this template**:
 
@@ -127,6 +135,10 @@ After structure approval:
 ## What We're NOT Doing
 
 [Explicitly list out-of-scope items to prevent scope creep]
+
+## External Dependencies
+
+[Things outside the codebase that must be in place before implementation can begin — one checkbox per item. Write "None identified." if there are none.]
 
 ## Implementation Approach
 
@@ -204,7 +216,7 @@ After structure approval:
 
 ## References
 
-- Related research: `current-task/research-[date]-[topic].md`
+- Related research: `current-task/research-YYYY-MM-DD-[topic].md`
 - Similar implementation: `[file:line]`
 ````
 
@@ -212,14 +224,18 @@ After structure approval:
 
 Share the file path and ask whether the phasing, success criteria, and technical details need adjustment. Iterate until the user is satisfied.
 
+Populate the `## External Dependencies` section from items gathered in Step 2: add a `- [ ] {item}` checkbox for each one. If none were identified, write "None identified."
+
 Before finalizing, extract all file paths from this plan's Changes Required sections and
 write them to `task.yaml` as `affected_files` (nested by repo, flat list per repo, scope
-as inline comments). This happens unconditionally.
+as inline comments). This happens unconditionally. Purpose: this cache lets overlap
+detection read small `task.yaml` files rather than full plan files, keeping context usage
+lean during planning sessions.
 
 Using those same extracted paths, check in a single pass:
 
-- **Overlap signal**: read `affected_files` from all other task folders in `planned`,
-  `researching`, `researched`, or `in-progress` status. If any files appear in both this
+- **Overlap signal**: read `affected_files` from all other task folders in `planning`,
+  `planned`, `researching`, `researched`, or `in-progress` status. If any files appear in both this
   plan and another task's list, note the overlapping task(s) and files.
 - **Split signal**: count the phases in this plan. Check for a foundation layer or a clean
   seam (a group of phases with no shared files with the remaining phases). Signal fires if
@@ -241,4 +257,4 @@ If neither signal fires, write no note.
 
 Once the plan is finalized:
 - Update current task's `task.yaml`: set `status: planned`
-- Stage: `git add {resolved_task_folder}/ PROJECT.md`
+- Stage: `git add {resolved_task_folder}/`

@@ -31,7 +31,17 @@ You are tasked with conducting comprehensive research across the codebase to ans
   - Otherwise, create a TASK_FOLDER from the input and create a new soft link `current-task` that points to it
 - Resolve `current-task` to the real path: `readlink -f current-task`
 - Read `task.yaml` from all TASK_FOLDERs at the repo root; note each task's status, description, and dependencies for context — be aware of work happening in parallel
-- Update current task's `task.yaml`: set `status: researching` (create the file with `status: researching` if it doesn't exist)
+- **Status check**: if the current task has a `task.yaml` and its status is `planned`, `in-progress`, or `complete`, warn before proceeding:
+  > "Current status is `{status}` — running `/research` will reset it to `researching`. Continue anyway?"
+  Wait for confirmation before updating status.
+- If `task.yaml` does not exist, create it with the full schema:
+  ```yaml
+  status: pending
+  description: ""
+  depends_on: []
+  jira: ""
+  affected_files: {}
+  ```
 
 ## Project Context
 
@@ -67,6 +77,8 @@ I'm ready to research some code. Please provide your research question or area o
 Then wait for the user's research query.
 
 ## Steps to follow after receiving the research query:
+
+0. **Backfill description if task.yaml was just created**: if `description` in `task.yaml` is empty, set it to the user's research query, stage `git add {resolved_task_folder}/task.yaml`, and inform the user: "task.yaml was just created — used your research query as the description."
 
 1. **Read any directly mentioned files first:**
    - If the user mentions specific files (tickets, docs, JSON), read them FULLY first
@@ -175,6 +187,7 @@ Then wait for the user's research query.
      ```
    - The `date` field captures when the research was conducted — set it to the actual research timestamp with timezone, not just today's date.
    - Keep frontmatter consistent across all research documents: always include all fields shown above, use `snake_case` for multi-word field names, and choose tags relevant to the topic and components studied.
+   - After saving the document, update `task.yaml`: set `status: researching`.
 
 7. **Add GitHub permalinks (if applicable):**
    - For each file reference, determine which repository it belongs to:

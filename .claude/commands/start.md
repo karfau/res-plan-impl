@@ -85,7 +85,7 @@ You are tasked with guiding the user to prepare his working tree for starting to
        Omit any line where nothing was detected (including GitHub if no remote was found).
        
 4. **Provide a project overview**
-   - List all TASK_FOLDERs; for each one read `task.yaml` if present (for status, description, dependencies); for tasks without one check for research/plan files to infer status
+   - List all TASK_FOLDERs; for each one read `task.yaml` if present (for status, description, `depends_on`); for tasks without one check for research/plan files to infer status. Derive blocking relationships by scanning: a task blocks any other task that lists it in `depends_on`.
    - If the `current-task` link exists and points to an existing TASK_FOLDER, call it out
    - Show a task overview, for example:
      ```
@@ -102,13 +102,11 @@ You are tasked with guiding the user to prepare his working tree for starting to
      - If the user provides a new task name: create a TASK_FOLDER, create a new soft link `current-task` pointing to it, then create `{task_folder}/task.yaml` by asking:
        - "Describe this task in one line:"
        - "Does this task depend on completing any existing tasks first? (list TASK_FOLDER names or none)"
-       - "Does any existing task need this one to complete first? (list TASK_FOLDER names or none)"
        Then write the file:
        ```yaml
        status: pending
        description: "[user's one-liner]"
        depends_on: []  # or list of TASK_FOLDER names
-       blocks: []      # or list of TASK_FOLDER names
        jira: ""        # optional
        affected_files: {}  # populated by /plan and /implement
        ```
@@ -128,9 +126,9 @@ You are tasked with guiding the user to prepare his working tree for starting to
    | pending     | "Run `/research` to begin research for this task."                       |
    | researching | "Research is in progress — run `/research` to continue."                 |
    | researched  | "Research is complete — run `/plan` to create an implementation plan."   |
+   | planning    | "Planning is in progress — run `/plan` to continue."                     |
    | planned     | "A plan exists — run `/implement` to start implementation."              |
    | in-progress | "Implementation is in progress — run `/implement` to continue."          |
-   | blocked     | "This task is blocked on: {depends_on list}. Work on those tasks first." |
    | complete    | "This task is complete. Pick a new task or start a fresh session."       |
 
    In all cases, remind the user to start a new session or `/clear` before running the next command.

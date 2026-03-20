@@ -50,7 +50,9 @@ phase defines observable behavioral specs, the code changes required, and both a
 The plan must be reviewed and approved before implementation begins.
 
 **Input**: research document and requirements discussion.
-**Output**: `T-{task}/plan-YYYY-MM-DD-{description}.md`
+**Output**: `T-{task}/plan.md`
+
+A [`/split`](.claude/commands/split.md) has your back when plans grow in scope or might cause conflicts with other tasks.
 
 ## 3. `/implement`
 
@@ -60,7 +62,7 @@ confirmed failing before any implementation code is written. After the tests pas
 confirm manual testing before the next phase begins. Progress is tracked via checkboxes in the plan file so work can be
 resumed at any point.
 
-**Input**: a plan file (passed as argument, or the most recent one in the task folder).
+**Input**: a plan file (passed as argument, or `plan.md` in the task folder).
 **Output**: implemented and verified code, with the plan file fully checked off.
 
 ## Getting `/start`ed
@@ -89,9 +91,9 @@ Each command is designed for a dedicated Claude session. After `/start` sets eve
 ### File Structure Overview
 
 - `PROJECT.md` — project description and linked repository metadata (paths, tooling, env requirements)
-- `T-{name}/` — task folder containing research docs, plan files, and `task.yaml` (status and dependencies)
+- `T-{name}/` — task folder containing research docs, `plan.md`, and `task.yaml` (status and dependencies)
 - `code/` — symlinks or clones of the repositories being worked on
-- `.claude/commands/` — the `/start`, `/research`, `/plan`, and `/implement` command definitions
+- `.claude/commands/` — the `/start`, `/research`, `/plan`, `/implement`, `/split`, and `/commands` command definitions
 
 ## Why an extra repo?
 
@@ -108,7 +110,9 @@ Use this repo as a template: create a branch to get started, or use the GitHub U
 
 ## Contributing
 
-If you've found better prompting patterns, hit edge cases in the workflow, or have ideas for new commands, contributions are welcome. 
+If you've found better prompting patterns, hit edge cases in the workflow, or have ideas for new commands, contributions are welcome.
 Open a pull request, improvements here benefit everyone building with this setup.
 
-And of course Not all of this is easily maintainable by hand. Use the LLM to explore, refine and improve things across multiple commands or subagents. 
+> **Tip**: To refine or update the command files while maintaining consistency across the workflow, use [`/commands`](.claude/commands/commands.md) in a fresh session.
+
+And of course Not all of this is easily maintainable by hand. Use the LLM to explore, refine and improve things across multiple commands or subagents.

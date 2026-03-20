@@ -33,9 +33,8 @@ them can be consolidated or redistributed.
 
 ## Input
 
-One or more plan file paths (space-separated). If none provided, use the most recent
-`current-task/plan-*.md` and ask the user of any other plan(s) should be investigated in addition.
-Provide a list to pick from.
+One or more plan file paths (space-separated). If none provided, use `current-task/plan.md`
+and ask if any other plan(s) should be investigated in addition. Provide a list to pick from.
 
 ## Steps
 
@@ -96,7 +95,6 @@ Example proposal format:
 Split proposal for T-big-task:
 
 Extract Phases 1–2 → T-big-task-foundation (new task)
-  task.yaml: blocks: [T-big-task]
   Phases:
     1. Schema migration
     2. Type definitions
@@ -121,11 +119,9 @@ Only proceed after explicit user acceptance.
 1. Create `T-{extracted-name}/` folder
 2. Write `task.yaml` in the new folder:
    - `status: planned`
-   - `blocks: [{original-task-name}]`
    - `affected_files` populated from the extracted phases (nested by repo)
-3. Write `plan-YYYY-MM-DD-{description}.md` in the new folder with only the extracted
-   phases, renumbered from Phase 1
-4. Edit the original plan file: remove extracted phases, renumber remaining phases from 1
+3. Write `plan.md` in the new folder with only the extracted phases, renumbered from Phase 1
+4. Edit the original `plan.md`: remove extracted phases, renumber remaining phases from 1
 5. Update the original `task.yaml`:
    - Add `depends_on: [{extracted-task-name}]`
    - Update `affected_files` to reflect the remaining phases only

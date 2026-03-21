@@ -12,7 +12,7 @@ You are tasked with helping the user modify command files in this repository. Be
 - **Simplicity over cleverness**: Commands must remain readable and editable by a human without AI assistance. Avoid cross-references, complex state, or clever abstractions that only an LLM can maintain.
 - **Consistency by default**: Unless there is a documented reason, structural elements (frontmatter fields, section names and order, Key Rules, Definitions, Initial Setup, Project Context) should be present and consistent across all applicable commands. Use the Consistency Checklist after every change.
 - **Reference files are read-only**: Files under `.refs/` may be consulted for inspiration on human-in-the-loop patterns or plan ideas, but must never be modified. They are not models for structural consistency — this repo's commands are more simplistic, deterministic, and manual-edit-friendly.
-- **Present options before acting**: For any non-trivial change, present at least 2 design options with explicit tradeoffs before making edits. One-line fixes (typos, punctuation) may be made directly.
+- **Present options before acting**: For any non-trivial change, present at least 2 design options with explicit tradeoffs before implementing. For changes the agent judges as low-risk (typos, obvious one-liners), describe what you'll do and wait for confirmation before implementing. Never make a change silently.
 - **Don't duplicate specifics**: Thresholds, criteria, and implementation details belong in the command file that owns them. The README and other references should describe in general terms — never repeat specific numbers or conditions that would need to be updated in multiple places.
 - **No superseded/stale file markers**: Never add `superseded_by`, `archived`, `deprecated`, or similar fields or status markers on artifact files (research docs, plan files). When multiple files of the same type exist in a TASK_FOLDER, list them ordered by most recently modified and let the human decide which to use.
 
@@ -82,83 +82,107 @@ Run this after every change. If any item fails, raise it with the user before cl
 - [ ] `/commands` tip appears in the Contributing section
 - [ ] File structure overview lists current command files accurately
 
-## Steps
+## Phases
 
-### 1. Load and verify
+### Phase A: Load and verify
 
-Read every file in the Command Registry fully. Then verify the Workflow Reference section above against what you read. If anything has drifted — a status name changed, a section was renamed, a new step was added — note it explicitly before proceeding:
+- Check `git status .claude/commands/` — if any files are dirty, assume resumption of a
+  previous incomplete session. Show the diff; the consistency check below will surface
+  any issues as todo items without needing to ask the user.
+- Read every file in the Command Registry fully, plus `README.md`.
+- Verify the Workflow Reference section above against what you read. If anything has
+  drifted, note it explicitly:
+  ```
+  Workflow reference drift detected:
+  - [item]: reference says X, actual command says Y
+  ```
+- Build a mental model of: structural patterns, cross-command dependencies, task.yaml
+  lifecycle, and Project Context handling across all commands.
+- **Changes are applied directly after user confirmation per todo item** — no batching.
 
-```
-Workflow reference drift detected:
-- [item]: reference says X, actual command says Y
-```
+**Pre-flight consistency check** (runs at the end of Phase A, before anything else):
+Run the full Consistency Checklist. Add all failures to the todo list as high-priority
+items. Then add any provided command arguments as lower-priority items.
 
-Build a mental model of: structural patterns, cross-command dependencies, task.yaml lifecycle, and Project Context handling across all commands.
+**Phase routing** (based on pre-flight results):
 
-Also read `README.md` fully to understand how the commands are presented to users and what is currently documented.
+| Consistency issues found | Args provided | Route |
+|---|---|---|
+| Yes | Yes | → Phase C (startup issues first, then args) |
+| Yes | No | → Phase C (startup issues first, then Phase D asks "what next?") |
+| No | Yes | → Phase C (args only) |
+| No | No | → Phase B (ask user what to change) |
 
-### 2. Ask the user what to change
+When seeding from the pre-flight check, briefly inform the user:
+"Found N consistency issues — added to todo list as priority items. Will process those
+first before [your requested changes / asking for input]."
 
-Present a brief status summary, then ask:
+### Phase B: Gather work
+
+*(Only reached if the pre-flight check found no issues AND no args were provided.)*
+
+Present a brief status summary:
 
 ```
 I've read all [N] commands and verified the workflow reference. [Note any drift if found.]
 
 Current structural state:
-- [1-3 bullet summary of anything notable: inconsistencies, recent changes, open questions]
+- [1-3 bullet summary of anything notable]
 
 What would you like to change?
 ```
 
-Wait for the user's input before proceeding.
+Wait for input. Seed the todo list from the user's answer, ordered by **impact on
+workflows/commands** (cross-command flow changes first; cosmetic or isolated changes last).
 
-### 3. Research reference material (if helpful)
+### Phase C: Work loop
 
-For novel design questions — especially around human-in-the-loop interactions — you may inspect files under `.refs/github.com/humanlayer/humanlayer/` for inspiration. Use them for ideas only; never model structural consistency after them, and never modify them.
+This phase runs until the todo list is empty AND the Consistency Checklist passes.
 
-### 4. Present design options
+**For each item in the todo list (in order):**
 
-For any non-trivial change, present 2–3 options. For each:
-- Describe the approach in plain terms
-- List concrete benefits
-- List concrete drawbacks
-- Note any consistency implications for other commands
+1. **For non-trivial changes**: present at least 2 design options with tradeoffs and wait
+   for selection before implementing. **For low-risk changes** (agent judgment): describe
+   what you'll do and wait for confirmation before implementing. Never implement silently.
 
-Wait for the user to select or ask for more discussion.
+2. **Implement** the change directly after confirmation. Briefly state what changed and why.
+   If a change affects user-facing behavior, add a README update as the next todo item.
+   If an unexpected complication surfaces, stop and raise it before continuing.
 
-### 5. Implement
+3. **Run the Consistency Checklist.** For each failure, add it to the todo list if not
+   already present.
 
-Make changes to the command files. After each logical group of changes, briefly state what changed and why. If a change touches multiple commands, explain the cross-command impact.
+4. Mark the current item complete. Move to the next.
 
-If mid-implementation you discover an unexpected complication or a design choice that wasn't surfaced in step 4, stop and raise it before continuing.
+**When the todo list is empty**: run the Consistency Checklist one final time.
+- All pass → proceed to Phase D
+- Any fail → add failures to todo list and continue the loop
 
-### 6. Consistency check
+*(The agent does not ask the user for open-ended input during this loop — only for
+confirmations or design option selections. The user is informed of progress via todo list
+updates and brief change notes.)*
 
-Run through the Consistency Checklist. For each failing item:
-- If it was introduced by the current changes: fix it
-- If it pre-existed and is out of scope: note it for the user as a follow-up suggestion
-
-### 7. Stage and summarize
-
-If any command was added, removed, renamed, or its behavior significantly changed, suggest to update `README.md`, let the user refine wording or iterate over it before applying and staging.
+### Phase D: Stage and close
 
 ```
 git add .claude/commands/ README.md
 ```
 
-Present a summary:
-- What was changed and why
-- Any pre-existing inconsistencies noted (not fixed) for future follow-up
-- Any updates needed to the Workflow Reference or Consistency Checklist in this file
-
-### 8. Continue or close
-
-Ask the user:
+Present the close message (info first, question last):
 
 ```
-Is there more related work to do, or any ideas to discuss while we have this context loaded?
+Summary:
+- [What changed and why, one bullet per logical group]
 
-Context window used: ~[N]% — for unrelated topics, starting a fresh session is recommended.
+Session guidance:
+- [Only show applicable lines:]
+  - If commands.md was edited: "commands.md was modified — use /clear and rerun /commands again so the updated version takes effect!"
+  - If context >= 60%: "Consider /compact before continuing."
+
+Context window used: ~[N]%
+
+Is there more to do?
+  → More similar topics to discuss → return to Phase B
+  → Unrelated topics → /clear or start a new session
+  → Done → close
 ```
-
-If the user has more to do, return to step 4 (if it's a new change request) or step 2 (if it's a new topic that requires re-reading). If not, close the session.

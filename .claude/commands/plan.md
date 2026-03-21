@@ -1,11 +1,11 @@
 ---
-description: Create detailed implementation plans through interactive research and iteration
+description: Create the detailed implementation plan through interactive research and iteration
 model: opus
 ---
 
 # Implementation Plan
 
-You are tasked with creating detailed implementation plans through an interactive, iterative process. Be skeptical, thorough, and work collaboratively with the user to produce high-quality technical specifications.
+You are tasked with creating the detailed implementation plan through an interactive, iterative process. Be skeptical, thorough, and work collaboratively with the user to produce high-quality technical specifications.
 
 ## Key Rules
 
@@ -55,7 +55,7 @@ When spawning any sub-agent, include the resolved repo path in the prompt:
 > claude
 > ```
 > Once inside that session, tell Claude:
-> *"Create a plan — read the research at `{absolute_path_to_research_file}`"*
+> *"Create the plan — read the research at `{absolute_path_to_research_file}`"*
 >
 > Would you like to continue from this session anyway, or start from the target repository?"
 
@@ -254,6 +254,30 @@ Example:
 ```
 
 If neither signal fires, write no note.
+
+**Decision Records**: Review the decisions made during this planning session. For each one,
+judge whether it could affect other tasks or future work beyond the current task (e.g.
+architectural choices, shared patterns, technology selections). Skip anything that is
+clearly scoped to this task alone. If any cross-task decisions are identified, present them:
+
+> The following decisions may be worth recording at the project level:
+> - **[Title]**: [brief description]
+> - ...
+>
+> Should any of these be added to PROJECT.md?
+
+For each decision the user confirms, append to the `## Decision Records` section of
+`PROJECT.md` (create the section if absent), using this format:
+
+```
+YYYY-MM-DD · [git config user.name] · [T-task-name/plan.md](T-task-name/plan.md)
+**[Title]**: [Decision and rationale in one or two sentences.]
+```
+
+Use today's date and `git config user.name` for the prefix. The link uses the task folder
+name and `plan.md` as a relative path from the repo root. Add a blank line between entries.
+
+If any records were added: `git add PROJECT.md`
 
 Once the plan is finalized:
 - Update current task's `task.yaml`: set `status: planned`

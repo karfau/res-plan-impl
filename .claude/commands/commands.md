@@ -24,7 +24,7 @@ Standard workflow (each step runs in a fresh session):
 
 1. `/start` — initialize the repo; creates `PROJECT.md`, links code repos, creates `TASK_FOLDER` and `current-task` symlink, writes `task.yaml`
 2. `/research` — documents the codebase; produces `research-YYYY-MM-DD-*.md`; sets `task.yaml status: researching` → `researched`
-3. `/plan` — creates an implementation plan; produces `plan.md`; sets `task.yaml status: planning` → `planned`
+3. `/plan` — creates the implementation plan; produces `plan.md`; sets `task.yaml status: planning` → `planned`
 4. `/implement` — executes the plan phase by phase with TDD; sets `task.yaml status: in-progress` → `complete`
 
 Independent utilities:
@@ -124,12 +124,18 @@ first before [your requested changes / asking for input]."
 Present a brief status summary:
 
 ```
-I've read all [N] commands and verified the workflow reference. [Note any drift if found.]
+I've read all [N] commands. Here's the current workflow:
 
-Current structural state:
-- [1-3 bullet summary of anything notable]
+/start → /research → /plan → /implement  (/split is a utility for large plans)
 
-What would you like to change?
+Interactive Commands:
+- start.md      — prepares the working tree, links code repos, creates task folder
+- research.md   — explores codebase -> research-YYYY-MM-DD-*.md
+- plan.md       — creates phased plan -> plan.md
+- split.md      — split conflicting or big plans into new tasks
+- implement.md  — executes the plan with TDD, phase by phase
+
+What would you like to change or ask about the workflow in this repo?
 ```
 
 Wait for input. Seed the todo list from the user's answer, ordered by **impact on
@@ -159,10 +165,13 @@ This phase runs until the todo list is empty AND the Consistency Checklist passe
 - Any fail → add failures to todo list and continue the loop
 
 *(The agent does not ask the user for open-ended input during this loop — only for
-confirmations or design option selections. The user is informed of progress via todo list
-updates and brief change notes.)*
+confirmations or design option selections. The user is able to amend/add notes to options provided by the agent
+and is informed of progress via todo list updates and brief change notes.)*
 
 ### Phase D: Stage and close
+
+*(Requiring the stated assertion is a guard against agents skipping verification under task-completion momentum.)*
+You MUST honestly remember the following state: "Consistency Checklist complete — all items pass. Todo list empty.", otherwise return to phase C.
 
 ```
 git add .claude/commands/ README.md

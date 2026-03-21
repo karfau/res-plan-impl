@@ -1,5 +1,5 @@
 ---
-description: Implement a plan using phase-level TDD — tests first, then code, with manual verification between phases
+description: Implement the plan using phase-level TDD — tests first, then code, with manual verification between phases
 model: opus
 ---
 
